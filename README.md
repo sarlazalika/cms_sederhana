@@ -133,4 +133,4 @@ Silakan buat pull request untuk kontribusi. Untuk perubahan besar, buka issue te
 
 ## 📄 Lisensi
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](https://choosealicense.com/licenses/mit/) 
