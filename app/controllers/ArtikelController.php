@@ -1,43 +1,98 @@
 <?php
-// Aktifkan error agar mudah debug
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// Path benar ke model
-require_once __DIR__ . '/../models/Artikel.php';
+require_once dirname(__DIR__) . '/config/auth.php';
+require_once dirname(__DIR__) . '/models/artikel.php';
 
 class ArtikelController {
+    private $artikelModel;
+    
+    public function __construct() {
+        $this->artikelModel = new Artikel();
+        requireLogin();
+    }
+
     public function index() {
-        $cari = $_GET['cari'] ?? '';
-        $data = Artikel::getAll($cari);
-        include __DIR__ . '/../views/artikel/index.php';
+        $cari = isset($_GET['cari']) ? $_GET['cari'] : '';
+        $artikels = Artikel::getAll($cari);
+        
+        // Debugging
+        if ($artikels === false) {
+            die("Error mengambil data artikel: " . $GLOBALS['conn']->error);
+        }
+        
+        // Debugging jumlah artikel
+        $total = $artikels->num_rows;
+        error_log("Jumlah artikel: " . $total);
+        
+        require_once dirname(__DIR__) . '/views/artikel/list.php';
     }
 
     public function tambah() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            Artikel::tambah($_POST['judul'], $_POST['isi']);
-            header("Location: index.php?controller=artikel&action=index");
+            $judul = $_POST['judul'];
+            $isi = $_POST['isi'];
+            
+            if (empty($judul) || empty($isi)) {
+                header('Location: ?controller=artikel&action=tambah&status=error');
+                exit;
+            }
+
+            if (Artikel::tambah($judul, $isi)) {
+                header('Location: ?controller=artikel&status=success&action=tambah');
+            } else {
+                header('Location: ?controller=artikel&action=tambah&status=error');
+            }
             exit;
         }
-        include __DIR__ . '/../views/artikel/tambah.php';
+        require_once dirname(__DIR__) . '/views/artikel/tambah.php';
     }
 
     public function edit() {
-        $id = $_GET['id'];
-        $data = Artikel::getById($id);
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            Artikel::edit($id, $_POST['judul'], $_POST['isi']);
-            header("Location: index.php?controller=artikel&action=index");
+        if (!isset($_GET['id'])) {
+            header('Location: ?controller=artikel');
             exit;
         }
-        include __DIR__ . '/../views/artikel/edit.php';
+
+        $id = $_GET['id'];
+        $artikel = Artikel::getById($id);
+
+        if (!$artikel) {
+            header('Location: ?controller=artikel&status=error&action=edit');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $judul = $_POST['judul'];
+            $isi = $_POST['isi'];
+            
+            if (empty($judul) || empty($isi)) {
+                header("Location: ?controller=artikel&action=edit&id=$id&status=error");
+                exit;
+            }
+
+            if (Artikel::edit($id, $judul, $isi)) {
+                header('Location: ?controller=artikel&status=success&action=edit');
+            } else {
+                header("Location: ?controller=artikel&action=edit&id=$id&status=error");
+            }
+            exit;
+        }
+
+        require_once dirname(__DIR__) . '/views/artikel/edit.php';
     }
 
     public function hapus() {
+        if (!isset($_GET['id'])) {
+            header('Location: ?controller=artikel');
+            exit;
+        }
+
         $id = $_GET['id'];
-        Artikel::hapus($id);
-        header("Location: index.php?controller=artikel&action=index");
+        
+        if (Artikel::hapus($id)) {
+            header('Location: ?controller=artikel&status=success&action=hapus');
+        } else {
+            header('Location: ?controller=artikel&status=error&action=hapus');
+        }
         exit;
     }
 }

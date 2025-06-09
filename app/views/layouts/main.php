@@ -1,13 +1,16 @@
 <?php
-require_once dirname(__DIR__, 2) . '/models/kategori.php';
-$kategoris = Kategori::getAll();
+require_once __DIR__ . '/../../config/auth.php';
+requireLogin();
+
+$title = $title ?? 'CMS Admin';
+$activeMenu = $activeMenu ?? 'dashboard';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Artikel - CMS</title>
+    <title><?php echo htmlspecialchars($title); ?></title>
     <style>
         :root {
             --primary-color: #8A7AD8;
@@ -49,7 +52,7 @@ $kategoris = Kategori::getAll();
             text-align: center;
         }
 
-        .sidebar-header h1 {
+        .sidebar-header h3 {
             color: var(--primary-color);
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
@@ -88,62 +91,16 @@ $kategoris = Kategori::getAll();
             padding: 2rem;
         }
 
-        .form-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: var(--shadow);
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid var(--border-color);
-        }
-
-        .form-header {
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            text-align: center;
         }
 
-        .form-header h1 {
+        .content-header h1 {
             color: var(--primary-color);
             font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-header p {
-            color: #888;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
-            font-weight: 500;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 0.8rem;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #F8F9FE;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(138, 122, 216, 0.1);
-            background: white;
-        }
-
-        textarea.form-control {
-            min-height: 200px;
-            resize: vertical;
         }
 
         .btn {
@@ -162,7 +119,6 @@ $kategoris = Kategori::getAll();
         .btn-primary {
             background: var(--gradient);
             color: white;
-            width: 100%;
         }
 
         .btn-primary:hover {
@@ -174,7 +130,7 @@ $kategoris = Kategori::getAll();
             background: transparent;
             color: var(--primary-color);
             border: 2px solid var(--primary-color);
-            margin-top: 1rem;
+            margin-left: 0.5rem;
         }
 
         .btn-secondary:hover {
@@ -183,9 +139,30 @@ $kategoris = Kategori::getAll();
             border-color: transparent;
         }
 
-        .form-footer {
-            margin-top: 2rem;
-            text-align: center;
+        .btn-danger {
+            background: #FF6B6B;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #FF5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.2);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            background: #FFF3F3;
+            border: 1px solid #FFE0E0;
+            color: #FF6B6B;
+        }
+
+        .alert-success {
+            background: #F0FFF4;
+            border-color: #C6F6D5;
+            color: #48BB78;
         }
 
         @media (max-width: 768px) {
@@ -216,27 +193,38 @@ $kategoris = Kategori::getAll();
                 border-radius: 5px;
                 cursor: pointer;
             }
+
+            .content-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .content-header .btn {
+                width: 100%;
+                margin-left: 0;
+            }
         }
     </style>
 </head>
 <body>
     <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-
+    
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1>CMS Panel</h1>
-            <p>Welcome, <?= $_SESSION['username'] ?></p>
+            <p>Welcome, <?= htmlspecialchars($_SESSION['admin'] ?? 'Admin') ?></p>
         </div>
 
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="?controller=dashboard" class="nav-link">
+                    <a href="?controller=dashboard" class="nav-link <?= $activeMenu === 'dashboard' ? 'active' : '' ?>">
                         <i>📊</i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="?controller=artikel" class="nav-link active">
+                    <a href="?controller=artikel" class="nav-link <?= $activeMenu === 'artikel' ? 'active' : '' ?>">
                         <i>📝</i> Artikel
                     </a>
                 </li>
@@ -250,29 +238,47 @@ $kategoris = Kategori::getAll();
     </aside>
 
     <main class="main-content">
-        <div class="form-container">
-            <div class="form-header">
-                <h1>Edit Artikel</h1>
-                <p>Edit artikel yang sudah ada</p>
-            </div>
-
-            <form action="?controller=artikel&action=edit&id=<?= $artikel['id'] ?>" method="POST">
-                <div class="form-group">
-                    <label for="judul">Judul Artikel</label>
-                    <input type="text" id="judul" name="judul" class="form-control" value="<?= htmlspecialchars($artikel['judul']) ?>" required>
+        <?php if(isset($_GET['status'])): ?>
+            <?php if($_GET['status'] == 'success'): ?>
+                <div class="alert alert-success">
+                    <?php
+                    if(isset($_GET['action'])) {
+                        switch($_GET['action']) {
+                            case 'tambah':
+                                echo "Artikel berhasil ditambahkan!";
+                                break;
+                            case 'edit':
+                                echo "Artikel berhasil diperbarui!";
+                                break;
+                            case 'hapus':
+                                echo "Artikel berhasil dihapus!";
+                                break;
+                        }
+                    }
+                    ?>
                 </div>
-
-                <div class="form-group">
-                    <label for="isi">Isi Artikel</label>
-                    <textarea id="isi" name="isi" class="form-control" required><?= htmlspecialchars($artikel['isi']) ?></textarea>
+            <?php else: ?>
+                <div class="alert">
+                    <?php
+                    if(isset($_GET['action'])) {
+                        switch($_GET['action']) {
+                            case 'tambah':
+                                echo "Gagal menambahkan artikel!";
+                                break;
+                            case 'edit':
+                                echo "Gagal memperbarui artikel!";
+                                break;
+                            case 'hapus':
+                                echo "Gagal menghapus artikel!";
+                                break;
+                        }
+                    }
+                    ?>
                 </div>
+            <?php endif; ?>
+        <?php endif; ?>
 
-                <div class="form-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-                    <a href="?controller=artikel" class="btn btn-secondary">Kembali</a>
-                </div>
-            </form>
-        </div>
+        <?php echo $content ?? ''; ?>
     </main>
 
     <script>
@@ -281,4 +287,4 @@ $kategoris = Kategori::getAll();
         }
     </script>
 </body>
-</html>
+</html> 

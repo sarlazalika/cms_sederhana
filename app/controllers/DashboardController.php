@@ -7,24 +7,26 @@ error_reporting(E_ALL);
 // Pastikan session sudah dimulai (biasanya di front controller)
 // session_start();
 
-// Cek session, jika belum login, redirect ke login
-if (!isset($_SESSION['admin'])) {
-    header("Location: index.php?controller=login&action=index");
-    exit;
-}
-
-// Saya asumsikan model Artikel sudah ada, jadi require model tersebut.
-require_once __DIR__ . '/../models/Artikel.php';
+// Path benar ke model
+require_once dirname(__DIR__) . '/models/artikel.php';
 
 class DashboardController {
+    public function __construct() {
+        // Cek session
+        if (!isset($_SESSION['admin'])) {
+            header('Location: ?controller=login');
+            exit;
+        }
+    }
+
     public function index() {
-        // Ambil total artikel dari model (misal dengan fungsi getTotal)
-        // Jika belum ada, bisa gunakan query langsung atau tambahkan fungsi di model.
-        global $conn;
-        $result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM artikel");
-        $data = mysqli_fetch_assoc($result);
-        $total_artikel = $data['total'];
-        // Tampilkan view dashboard
-        include __DIR__ . '/../views/dashboard/index.php';
+        // Ambil total artikel
+        $total_artikel = Artikel::getTotal();
+        
+        // Ambil artikel terbaru (5 artikel terakhir)
+        $artikels = Artikel::getLatest(5);
+        
+        // Kirim data ke view
+        require_once dirname(__DIR__) . '/views/dashboard/index.php';
     }
 } 
